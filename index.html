@@ -2,268 +2,89 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>UK Budget Allocator 2025</title>
-  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <title>Budget Allocator (Test Version)</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      padding: 20px;
-      max-width: 960px;
+      font-family: sans-serif;
+      max-width: 700px;
       margin: auto;
+      padding: 20px;
     }
-
-    #controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
     .slider-container {
-      margin: 10px 0;
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
+      margin-bottom: 10px;
       gap: 10px;
     }
-
-    .category-label {
-      width: 180px;
+    .label {
+      width: 150px;
     }
-
-    .budget-value {
-      width: 80px;
+    .value {
+      width: 60px;
       text-align: right;
     }
-
     input[type="range"] {
       flex: 1;
-      min-width: 200px;
-    }
-
-    input[type="checkbox"] {
-      margin-right: 5px;
-    }
-
-    .button-group button {
-      margin: 0 2px;
-      padding: 3px 8px;
-      font-size: 14px;
-    }
-
-    button {
-      padding: 6px 12px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-
-    #chart {
-      margin-top: 40px;
-      display: flex;
-      justify-content: center;
-    }
-
-    svg text {
-      font-size: 12px;
-      fill: white;
-      pointer-events: none;
-    }
-
-    @media (max-width: 600px) {
-      .category-label {
-        width: 100%;
-      }
-      .slider-container {
-        flex-direction: column;
-        align-items: flex-start;
-      }
     }
   </style>
 </head>
 <body>
-  <h1>UK Budget Allocator 2025</h1>
 
-  <div id="controls">
-    <div>
-      <button onclick="toggleAllLocks()">Select All / Deselect All</button>
-      <button onclick="resetBudget()">Reset</button>
-      <button onclick="downloadBudget()">Download My Budget</button>
-    </div>
-    <div>
-      <strong>Total Allocated:</strong> £<span id="total-allocated">0</span> billion &nbsp;&nbsp;
-      <strong>Remaining:</strong> £<span id="remaining-budget">0</span> billion
-    </div>
-  </div>
+<h1>Budget Allocator (Debug Mode)</h1>
+<div id="sliders"></div>
+<p><strong>Total:</strong> £<span id="total">0</span> billion</p>
 
-  <div id="sliders"></div>
+<script>
+  const totalBudget = 1080.0;
+  const categories = [
+    { name: "Health", allocation: 190.1, locked: false },
+    { name: "Education", allocation: 88.8, locked: false },
+    { name: "Defence", allocation: 37.5, locked: false },
+    { name: "Welfare", allocation: 251.0, locked: false },
+    { name: "Public Order", allocation: 39.0, locked: false },
+    { name: "Transport", allocation: 45.0, locked: false }
+  ];
 
-  <div id="chart">
-    <svg id="pieChart" width="400" height="400"></svg>
-  </div>
+  function render() {
+    const container = document.getElementById("sliders");
+    container.innerHTML = "";
 
-  <script>
-    const totalBudget = 1080.0;
-    const defaultCategories = [
-      { name: "Health", allocation: 190.1 },
-      { name: "Education", allocation: 88.8 },
-      { name: "Defence", allocation: 37.5 },
-      { name: "Welfare", allocation: 251.0 },
-      { name: "Public Order", allocation: 39.0 },
-      { name: "Transport", allocation: 45.0 },
-      { name: "Housing/Environment", allocation: 30.0 },
-      { name: "Debt Interest", allocation: 83.0 },
-      { name: "Other", allocation: 215.6 }
-    ];
-    let categories = defaultCategories.map(c => ({ ...c, locked: false }));
+    categories.forEach((cat, index) => {
+      const row = document.createElement("div");
+      row.className = "slider-container";
 
-    function render() {
-      const container = d3.select("#sliders");
-      container.html("");
+      const label = document.createElement("span");
+      label.className = "label";
+      label.textContent = cat.name;
 
-      categories.forEach((cat, i) => {
-        const row = container.append("div").attr("class", "slider-container");
-
-        // Lock checkbox
-        row.append("input")
-          .attr("type", "checkbox")
-          .property("checked", cat.locked)
-          .on("change", function () {
-            cat.locked = this.checked;
-            render();
-          });
-
-        row.append("span").attr("class", "category-label").text(cat.name);
-
-        // Slider
-        row.append("input")
-          .attr("type", "range")
-          .attr("min", 0)
-          .attr("max", totalBudget)
-          .attr("step", 1)
-          .attr("value", cat.allocation)
-          .attr("disabled", cat.locked)
-          .on("input", function () {
-            updateAllocation(i, +this.value);
-          });
-
-        row.append("span")
-          .attr("class", "budget-value")
-          .attr("id", `value-${i}`)
-          .text(`£${cat.allocation.toFixed(1)}`);
-
-        const buttons = row.append("span").attr("class", "button-group");
-        buttons.append("button")
-          .text("+")
-          .attr("disabled", cat.locked)
-          .on("click", () => adjustBy(i, 1));
-        buttons.append("button")
-          .text("–")
-          .attr("disabled", cat.locked)
-          .on("click", () => adjustBy(i, -1));
+      const slider = document.createElement("input");
+      slider.type = "range";
+      slider.min = 0;
+      slider.max = totalBudget;
+      slider.step = 1;
+      slider.value = cat.allocation;
+      slider.disabled = cat.locked;
+      slider.addEventListener("input", () => {
+        cat.allocation = parseFloat(slider.value);
+        render(); // re-render to update values
       });
 
-      updateTotals();
-      drawPieChart();
-    }
+      const value = document.createElement("span");
+      value.className = "value";
+      value.textContent = `£${cat.allocation.toFixed(1)}`;
 
-    function updateAllocation(index, newValue) {
-      const oldValue = categories[index].allocation;
-      const diff = newValue - oldValue;
-      if (diff === 0) return;
+      row.appendChild(label);
+      row.appendChild(slider);
+      row.appendChild(value);
+      container.appendChild(row);
+    });
 
-      const unlockedOthers = categories
-        .map((cat, i) => ({ ...cat, index: i }))
-        .filter(c => c.index !== index && !c.locked);
+    const total = categories.reduce((sum, c) => sum + c.allocation, 0);
+    document.getElementById("total").textContent = total.toFixed(1);
+  }
 
-      const available = unlockedOthers.reduce((sum, c) => sum + c.allocation, 0);
-      if (diff > available) {
-        alert("Not enough available budget in unlocked sliders.");
-        return;
-      }
+  document.addEventListener("DOMContentLoaded", render);
+</script>
 
-      let remainingDiff = diff;
-      for (let c of unlockedOthers) {
-        if (remainingDiff <= 0) break;
-        const reduceBy = Math.min(c.allocation, remainingDiff);
-        categories[c.index].allocation -= reduceBy;
-        remainingDiff -= reduceBy;
-      }
-
-      categories[index].allocation = newValue;
-      render();
-    }
-
-    function adjustBy(index, amount) {
-      if (categories[index].locked) return;
-      const newVal = Math.max(0, categories[index].allocation + amount);
-      updateAllocation(index, newVal);
-    }
-
-    function updateTotals() {
-      const total = categories.reduce((sum, c) => sum + c.allocation, 0);
-      document.getElementById("total-allocated").innerText = total.toFixed(1);
-      document.getElementById("remaining-budget").innerText = (totalBudget - total).toFixed(1);
-      categories.forEach((c, i) => {
-        document.getElementById(`value-${i}`).innerText = `£${c.allocation.toFixed(1)}`;
-      });
-    }
-
-    function toggleAllLocks() {
-      const allLocked = categories.every(c => c.locked);
-      categories.forEach(c => c.locked = !allLocked);
-      render();
-    }
-
-    function resetBudget() {
-      categories = defaultCategories.map(c => ({ ...c, locked: false }));
-      render();
-    }
-
-    function downloadBudget() {
-      const csv = categories.map(c => `${c.name},${c.allocation.toFixed(1)}`).join("\n");
-      const blob = new Blob([`Category,Allocation\n${csv}`], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "uk_budget_allocation.csv";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-
-    function drawPieChart() {
-      const width = 400;
-      const height = 400;
-      const radius = Math.min(width, height) / 2;
-      const svg = d3.select("#pieChart");
-      svg.selectAll("*").remove();
-
-      const g = svg.append("g").attr("transform", `translate(${width / 2},${height / 2})`);
-      const pie = d3.pie().value(d => d.allocation)(categories);
-      const arc = d3.arc().innerRadius(0).outerRadius(radius);
-      const color = d3.scaleOrdinal(d3.schemeCategory10);
-
-      g.selectAll("path")
-        .data(pie)
-        .enter()
-        .append("path")
-        .attr("d", arc)
-        .attr("fill", d => color(d.data.name))
-        .attr("stroke", "white")
-        .style("stroke-width", "2px");
-
-      g.selectAll("text")
-        .data(pie)
-        .enter()
-        .append("text")
-        .attr("transform", d => `translate(${arc.centroid(d)})`)
-        .attr("text-anchor", "middle")
-        .text(d => d.data.allocation > 20 ? d.data.name : "");
-    }
-
-    document.addEventListener("DOMContentLoaded", render);
-  </script>
 </body>
 </html>
