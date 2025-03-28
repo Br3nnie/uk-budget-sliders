@@ -4,12 +4,134 @@
     <meta charset="UTF-8">
     <title>UK Budget Allocator 2025</title>
     <script src="https://d3js.org/d3.v6.min.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: auto;
+        }
+        .slider-container {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+        }
+        .category-label {
+            flex: 1;
+            margin-left: 10px;
+        }
+        .budget-value {
+            width: 100px;
+            text-align: right;
+            margin-left: 10px;
+        }
+        input[type="range"] {
+            flex: 3;
+            margin: 0 10px;
+        }
+        input[type="checkbox"] {
+            margin-left: 5px;
+        }
+    </style>
 </head>
 <body>
     <h1>UK Budget Allocator 2025</h1>
     <div id="sliders"></div>
     <h2>Total Allocated: £<span id="total-allocated">0</span> billion</h2>
-    <script src="budget-allocator.js"></script>
+    <h2>Remaining Budget: £<span id="remaining-budget">0</span> billion</h2>
+
+    <script>
+        const totalBudget = 1080.0;
+        const categories = [
+            { name: "Health", allocation: 190.1, locked: false },
+            { name: "Education", allocation: 88.8, locked: false },
+            { name: "Defence", allocation: 37.5, locked: false },
+            { name: "Welfare", allocation: 251.0, locked: false },
+            { name: "Public Order", allocation: 39.0, locked: false },
+            { name: "Transport", allocation: 45.0, locked: false },
+            { name: "Housing/Environment", allocation: 30.0, locked: false },
+            { name: "Debt Interest", allocation: 83.0, locked: false },
+            { name: "Other", allocation: 215.6, locked: false }
+        ];
+
+        function render() {
+            const sliderContainer = d3.select("#sliders");
+            sliderContainer.html("");
+
+            categories.forEach((cat, index) => {
+                const container = sliderContainer.append("div").attr("class", "slider-container");
+
+                // Lock checkbox
+                container.append("input")
+                    .attr("type", "checkbox")
+                    .property("checked", cat.locked)
+                    .on("change", function () {
+                        cat.locked = this.checked;
+                        render();
+                    });
+
+                // Category name
+                container.append("span")
+                    .attr("class", "category-label")
+                    .text(cat.name);
+
+                // Slider
+                container.append("input")
+                    .attr("type", "range")
+                    .attr("min", 0)
+                    .attr("max", totalBudget)
+                    .attr("value", cat.allocation)
+                    .attr("disabled", cat.locked)
+                    .on("input", function () {
+                        updateAllocation(index, +this.value);
+                    });
+
+                // Value
+                container.append("span")
+                    .attr("class", "budget-value")
+                    .attr("id", `value-${index}`)
+                    .text(`£${cat.allocation.toFixed(1)}`);
+            });
+
+            updateTotal();
+        }
+
+        function updateAllocation(changedIndex, newValue) {
+            const oldValue = categories[changedIndex].allocation;
+            const diff = newValue - oldValue;
+            if (diff === 0) return;
+
+            const unlockedOthers = categories.filter((cat, i) => i !== changedIndex && !cat.locked);
+            const totalAvailable = unlockedOthers.reduce((sum, cat) => sum + cat.allocation, 0);
+
+            if (diff > totalAvailable) {
+                alert("Not enough budget available in unlocked sliders.");
+                return;
+            }
+
+            let remainingDiff = diff;
+            for (let cat of unlockedOthers) {
+                if (remainingDiff > 0) {
+                    const reduction = Math.min(cat.allocation, remainingDiff);
+                    cat.allocation -= reduction;
+                    remainingDiff -= reduction;
+                }
+            }
+
+            categories[changedIndex].allocation = newValue;
+            render();
+        }
+
+        function updateTotal() {
+            const total = categories.reduce((acc, cat) => acc + cat.allocation, 0);
+            document.getElementById("total-allocated").innerText = total.toFixed(1);
+            document.getElementById("remaining-budget").innerText = (totalBudget - total).toFixed(1);
+            categories.forEach((cat, i) => {
+                document.getElementById(`value-${i}`).innerText = `£${cat.allocation.toFixed(1)}`;
+            });
+        }
+
+        render();
+    </script>
 </body>
 </html>
