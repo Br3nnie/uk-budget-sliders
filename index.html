@@ -2,89 +2,290 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Budget Allocator (Test Version)</title>
+  <title>UK Budget Allocator 2025</title>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
   <style>
+    :root {
+      --bg: #f5f5f7;
+      --text: #1d1d1f;
+      --accent: #007aff;
+      --border: #d1d1d6;
+      --light: #e5e5ea;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
     body {
-      font-family: sans-serif;
-      max-width: 700px;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      padding: 40px 20px;
+      max-width: 1000px;
       margin: auto;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      font-size: 20px;
+      margin-top: 40px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 5px;
+    }
+
+    #controls {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 1rem;
+    }
+
+    button {
+      font-family: var(--font);
+      padding: 6px 14px;
+      font-size: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: var(--light);
+    }
+
+    .slider-container {
+      display: grid;
+      grid-template-columns: auto 1fr 80px 100px 80px;
+      align-items: center;
+      gap: 12px;
+      margin: 12px 0;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .slider-container:first-child {
+      border-top: 1px solid var(--border);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 5px;
+      background: var(--light);
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 0 0 1px white;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+    }
+
+    #chart {
+      margin-top: 30px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
       padding: 20px;
     }
-    .slider-container {
-      display: flex;
-      align-items: center;
-      margin-bottom: 10px;
-      gap: 10px;
+
+    svg text {
+      font-size: 12px;
     }
-    .label {
-      width: 150px;
-    }
-    .value {
-      width: 60px;
-      text-align: right;
-    }
-    input[type="range"] {
-      flex: 1;
+
+    @media (max-width: 700px) {
+      .slider-container {
+        grid-template-columns: 1fr;
+      }
+
+      #controls {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
   </style>
 </head>
 <body>
+  <h1>UK Budget Allocator 2025</h1>
 
-<h1>Budget Allocator (Debug Mode)</h1>
-<div id="sliders"></div>
-<p><strong>Total:</strong> £<span id="total">0</span> billion</p>
+  <div id="controls">
+    <div>
+      <button onclick="resetBudget()">Reset</button>
+      <button onclick="downloadBudget()">Download CSV</button>
+    </div>
+    <div>
+      <strong>Total:</strong> £<span id="total">0</span> billion &nbsp; | &nbsp;
+      <strong>Remaining:</strong> £<span id="remaining">0</span> billion
+    </div>
+  </div>
 
-<script>
-  const totalBudget = 1080.0;
-  const categories = [
-    { name: "Health", allocation: 190.1, locked: false },
-    { name: "Education", allocation: 88.8, locked: false },
-    { name: "Defence", allocation: 37.5, locked: false },
-    { name: "Welfare", allocation: 251.0, locked: false },
-    { name: "Public Order", allocation: 39.0, locked: false },
-    { name: "Transport", allocation: 45.0, locked: false }
-  ];
+  <div id="sliders"></div>
 
-  function render() {
-    const container = document.getElementById("sliders");
-    container.innerHTML = "";
+  <h2>Official vs. Adjusted Budget</h2>
+  <div id="chart">
+    <svg width="900" height="400" id="barChart"></svg>
+  </div>
 
-    categories.forEach((cat, index) => {
-      const row = document.createElement("div");
-      row.className = "slider-container";
+  <script>
+    const totalBudget = 1080.0;
+    const defaultCategories = [
+      { name: "Health", allocation: 190.1 },
+      { name: "Education", allocation: 88.8 },
+      { name: "Defence", allocation: 37.5 },
+      { name: "Welfare", allocation: 251.0 },
+      { name: "Public Order", allocation: 39.0 },
+      { name: "Transport", allocation: 45.0 },
+      { name: "Housing/Environment", allocation: 30.0 },
+      { name: "Debt Interest", allocation: 83.0 },
+      { name: "Other", allocation: 215.6 }
+    ];
 
-      const label = document.createElement("span");
-      label.className = "label";
-      label.textContent = cat.name;
+    let categories = defaultCategories.map(c => ({ ...c, current: c.allocation }));
 
-      const slider = document.createElement("input");
-      slider.type = "range";
-      slider.min = 0;
-      slider.max = totalBudget;
-      slider.step = 1;
-      slider.value = cat.allocation;
-      slider.disabled = cat.locked;
-      slider.addEventListener("input", () => {
-        cat.allocation = parseFloat(slider.value);
-        render(); // re-render to update values
+    function render() {
+      const container = document.getElementById("sliders");
+      container.innerHTML = "";
+
+      categories.forEach((cat, index) => {
+        const row = document.createElement("div");
+        row.className = "slider-container";
+
+        const label = document.createElement("span");
+        label.textContent = cat.name;
+        row.appendChild(label);
+
+        const slider = document.createElement("input");
+        slider.type = "range";
+        slider.min = 0;
+        slider.max = totalBudget;
+        slider.step = 1;
+        slider.value = cat.current;
+        slider.addEventListener("input", () => {
+          cat.current = parseFloat(slider.value);
+          render();
+        });
+        row.appendChild(slider);
+
+        const adjusted = document.createElement("span");
+        adjusted.textContent = `£${cat.current.toFixed(1)}`;
+        row.appendChild(adjusted);
+
+        const official = document.createElement("span");
+        official.textContent = `£${cat.allocation.toFixed(1)}`;
+        row.appendChild(official);
+
+        const variance = document.createElement("span");
+        const diff = cat.current - cat.allocation;
+        variance.textContent = (diff >= 0 ? "+" : "") + diff.toFixed(1);
+        variance.style.color = diff === 0 ? "#555" : diff > 0 ? "green" : "red";
+        row.appendChild(variance);
+
+        container.appendChild(row);
       });
 
-      const value = document.createElement("span");
-      value.className = "value";
-      value.textContent = `£${cat.allocation.toFixed(1)}`;
+      updateTotals();
+      drawBarChart();
+    }
 
-      row.appendChild(label);
-      row.appendChild(slider);
-      row.appendChild(value);
-      container.appendChild(row);
-    });
+    function updateTotals() {
+      const total = categories.reduce((sum, c) => sum + c.current, 0);
+      document.getElementById("total").textContent = total.toFixed(1);
+      document.getElementById("remaining").textContent = (totalBudget - total).toFixed(1);
+    }
 
-    const total = categories.reduce((sum, c) => sum + c.allocation, 0);
-    document.getElementById("total").textContent = total.toFixed(1);
-  }
+    function resetBudget() {
+      categories = defaultCategories.map(c => ({ ...c, current: c.allocation }));
+      render();
+    }
 
-  document.addEventListener("DOMContentLoaded", render);
-</script>
+    function downloadBudget() {
+      const header = "Category,Official,Adjusted,Variance\n";
+      const rows = categories.map(c => {
+        const variance = (c.current - c.allocation).toFixed(1);
+        return `${c.name},${c.allocation.toFixed(1)},${c.current.toFixed(1)},${variance}`;
+      });
+      const blob = new Blob([header + rows.join("\n")], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "uk_budget.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
 
+    function drawBarChart() {
+      const svg = d3.select("#barChart");
+      svg.selectAll("*").remove();
+
+      const width = +svg.attr("width");
+      const height = +svg.attr("height");
+      const margin = { top: 20, right: 30, bottom: 70, left: 80 };
+
+      const x = d3.scaleBand()
+        .domain(categories.map(c => c.name))
+        .range([margin.left, width - margin.right])
+        .padding(0.2);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(categories, c => Math.max(c.allocation, c.current)) * 1.2])
+        .range([height - margin.bottom, margin.top]);
+
+      svg.append("g")
+        .attr("transform", `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x))
+        .selectAll("text")
+        .attr("transform", "rotate(-40)")
+        .style("text-anchor", "end");
+
+      svg.append("g")
+        .attr("transform", `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar-official")
+        .data(categories)
+        .enter()
+        .append("rect")
+        .attr("x", d => x(d.name))
+        .attr("y", d => y(d.allocation))
+        .attr("height", d => y(0) - y(d.allocation))
+        .attr("width", x.bandwidth() / 2)
+        .attr("fill", "#d1d1d6");
+
+      svg.selectAll(".bar-current")
+        .data(categories)
+        .enter()
+        .append("rect")
+        .attr("x", d => x(d.name) + x.bandwidth() / 2)
+        .attr("y", d => y(d.current))
+        .attr("height", d => y(0) - y(d.current))
+        .attr("width", x.bandwidth() / 2)
+        .attr("fill", "#007aff");
+    }
+
+    document.addEventListener("DOMContentLoaded", render);
+  </script>
 </body>
 </html>
