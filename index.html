@@ -1,15 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>UK Budget Allocator 2025</title>
   <script src="https://d3js.org/d3.v6.min.js"></script>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       padding: 20px;
-      max-width: 800px;
+      max-width: 900px;
       margin: auto;
+    }
+
+    #controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
     }
 
     .slider-container {
@@ -37,13 +44,32 @@
     input[type="checkbox"] {
       margin-left: 5px;
     }
+
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      margin-left: 10px;
+    }
+
+    .toggle-button {
+      margin: 2px;
+      padding: 2px 6px;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
   <h1>UK Budget Allocator 2025</h1>
+
+  <div id="controls">
+    <button onclick="toggleAllLocks()">Select All / Deselect All</button>
+    <div>
+      <strong>Total Allocated:</strong> £<span id="total-allocated">0</span> billion &nbsp;&nbsp;
+      <strong>Remaining Budget:</strong> £<span id="remaining-budget">0</span> billion
+    </div>
+  </div>
+
   <div id="sliders"></div>
-  <h2>Total Allocated: £<span id="total-allocated">0</span> billion</h2>
-  <h2>Remaining Budget: £<span id="remaining-budget">0</span> billion</h2>
 
   <script>
     const totalBudget = 1080.0;
@@ -97,6 +123,20 @@
           .attr("class", "budget-value")
           .attr("id", `value-${index}`)
           .text(`£${cat.allocation.toFixed(1)}`);
+
+        // Up/down buttons
+        const buttonGroup = container.append("div").attr("class", "button-group");
+        buttonGroup.append("button")
+          .attr("class", "toggle-button")
+          .text("+")
+          .attr("disabled", cat.locked)
+          .on("click", () => adjustBy(index, 1));
+
+        buttonGroup.append("button")
+          .attr("class", "toggle-button")
+          .text("–")
+          .attr("disabled", cat.locked)
+          .on("click", () => adjustBy(index, -1));
       });
 
       updateTotal();
@@ -105,7 +145,6 @@
     function updateAllocation(changedIndex, newValue) {
       const oldValue = categories[changedIndex].allocation;
       const diff = newValue - oldValue;
-
       if (diff === 0) return;
 
       const unlockedOthers = categories
@@ -133,6 +172,12 @@
       render();
     }
 
+    function adjustBy(index, amount) {
+      const current = categories[index].allocation;
+      const newValue = Math.max(0, current + amount);
+      updateAllocation(index, newValue);
+    }
+
     function updateTotal() {
       const total = categories.reduce((acc, cat) => acc + cat.allocation, 0);
       document.getElementById("total-allocated").innerText = total.toFixed(1);
@@ -140,6 +185,12 @@
       categories.forEach((cat, i) => {
         document.getElementById(`value-${i}`).innerText = `£${cat.allocation.toFixed(1)}`;
       });
+    }
+
+    function toggleAllLocks() {
+      const allLocked = categories.every(cat => cat.locked);
+      categories.forEach(cat => cat.locked = !allLocked);
+      render();
     }
 
     render();
