@@ -63,7 +63,7 @@
 
     .slider-container, .slider-header, .slider-total {
       display: grid;
-      grid-template-columns: auto 300px 80px 100px 80px;
+      grid-template-columns: 160px auto 80px 100px 80px;
       align-items: center;
       gap: 12px;
       padding: 10px 0;
@@ -87,7 +87,7 @@
 
     input[type="range"] {
       -webkit-appearance: none;
-      width: 300px;
+      width: 100%;
       height: 6px;
       border-radius: 5px;
       background: var(--light);
@@ -111,6 +111,18 @@
       border-radius: 50%;
       background: currentColor;
       cursor: pointer;
+    }
+
+    .toggle-buttons {
+      display: flex;
+      gap: 4px;
+    }
+
+    .toggle-buttons button {
+      width: 30px;
+      height: 30px;
+      font-size: 16px;
+      padding: 0;
     }
 
     #chart {
@@ -198,6 +210,7 @@
         label.textContent = cat.name;
         row.appendChild(label);
 
+        const sliderWrap = document.createElement("div");
         const slider = document.createElement("input");
         slider.type = "range";
         slider.min = 0;
@@ -212,20 +225,35 @@
           cat.current = parseFloat(slider.value);
           render();
         });
-        row.appendChild(slider);
+        sliderWrap.appendChild(slider);
+
+        const toggles = document.createElement("div");
+        toggles.className = "toggle-buttons";
+        const plus = document.createElement("button");
+        plus.textContent = "+";
+        plus.onclick = () => { cat.current += 1; render(); };
+        const minus = document.createElement("button");
+        minus.textContent = "−";
+        minus.onclick = () => { cat.current = Math.max(0, cat.current - 1); render(); };
+        toggles.appendChild(minus);
+        toggles.appendChild(plus);
+
+        sliderWrap.appendChild(toggles);
+        row.appendChild(sliderWrap);
 
         const current = document.createElement("span");
-        current.textContent = `£${cat.current.toFixed(1)}`;
+        current.textContent = `£${cat.current.toLocaleString(undefined, { minimumFractionDigits: 1 })}`;
         row.appendChild(current);
 
         const official = document.createElement("span");
-        official.textContent = `£${cat.allocation.toFixed(1)}`;
+        official.textContent = `£${cat.allocation.toLocaleString(undefined, { minimumFractionDigits: 1 })}`;
         row.appendChild(official);
 
         const variance = document.createElement("span");
         const diff = cat.current - cat.allocation;
-        variance.textContent = (diff >= 0 ? "+" : "") + diff.toFixed(1);
-        variance.style.color = diff === 0 ? "#555" : diff > 0 ? "green" : "red";
+        const absDiff = Math.abs(diff).toLocaleString(undefined, { minimumFractionDigits: 1 });
+        variance.textContent = diff < 0 ? `(${absDiff})` : `+${absDiff}`;
+        variance.style.color = diff === 0 ? "#555" : diff < 0 ? "red" : "green";
         row.appendChild(variance);
 
         container.appendChild(row);
@@ -236,12 +264,14 @@
       });
 
       const totalsRow = document.getElementById("totals-row");
+      const absVar = Math.abs(totals.variance).toLocaleString(undefined, { minimumFractionDigits: 1 });
+      const varText = totals.variance < 0 ? `(${absVar})` : `+${absVar}`;
       totalsRow.innerHTML = `
         <span>Total</span>
         <span></span>
-        <span>£${totals.current.toFixed(1)}</span>
-        <span>£${totals.official.toFixed(1)}</span>
-        <span>${totals.variance >= 0 ? "+" : ""}${totals.variance.toFixed(1)}</span>
+        <span>£${totals.current.toLocaleString(undefined, { minimumFractionDigits: 1 })}</span>
+        <span>£${totals.official.toLocaleString(undefined, { minimumFractionDigits: 1 })}</span>
+        <span>${varText}</span>
       `;
 
       updateTotals();
