@@ -61,36 +61,46 @@
       background: var(--light);
     }
 
-    .slider-container {
+    .slider-container, .slider-header, .slider-total {
       display: grid;
-      grid-template-columns: auto 1fr 80px 100px 80px;
+      grid-template-columns: auto 300px 80px 100px 80px;
       align-items: center;
       gap: 12px;
-      margin: 12px 0;
-      padding: 12px 0;
+      padding: 10px 0;
+    }
+
+    .slider-container {
       border-bottom: 1px solid var(--border);
     }
 
-    .slider-container:first-child {
-      border-top: 1px solid var(--border);
+    .slider-header {
+      font-weight: 600;
+      border-bottom: 2px solid var(--border);
+      margin-top: 10px;
+      margin-bottom: 5px;
+    }
+
+    .slider-total {
+      font-weight: 600;
+      border-top: 2px solid var(--border);
     }
 
     input[type="range"] {
       -webkit-appearance: none;
-      width: 100%;
+      width: 300px;
       height: 6px;
       border-radius: 5px;
       background: var(--light);
       outline: none;
+      transition: background 0.3s;
     }
 
     input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      appearance: none;
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      background: var(--accent);
+      background: currentColor;
       cursor: pointer;
       box-shadow: 0 0 0 1px white;
     }
@@ -99,7 +109,7 @@
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      background: var(--accent);
+      background: currentColor;
       cursor: pointer;
     }
 
@@ -116,8 +126,9 @@
     }
 
     @media (max-width: 700px) {
-      .slider-container {
+      .slider-container, .slider-header, .slider-total {
         grid-template-columns: 1fr;
+        gap: 4px;
       }
 
       #controls {
@@ -141,11 +152,20 @@
     </div>
   </div>
 
+  <div class="slider-header">
+    <span>Category</span>
+    <span></span>
+    <span>Forecast</span>
+    <span>Official</span>
+    <span>Variance</span>
+  </div>
+
   <div id="sliders"></div>
+  <div class="slider-total" id="totals-row"></div>
 
   <h2>Official vs. Adjusted Budget</h2>
   <div id="chart">
-    <svg width="900" height="400" id="barChart"></svg>
+    <svg width="900" height="420" id="barChart"></svg>
   </div>
 
   <script>
@@ -168,6 +188,8 @@
       const container = document.getElementById("sliders");
       container.innerHTML = "";
 
+      let totals = { current: 0, official: 0, variance: 0 };
+
       categories.forEach((cat, index) => {
         const row = document.createElement("div");
         row.className = "slider-container";
@@ -182,15 +204,19 @@
         slider.max = totalBudget;
         slider.step = 1;
         slider.value = cat.current;
+        const intensity = Math.min(1, cat.current / (totalBudget * 0.5));
+        const red = 255;
+        const greenBlue = Math.floor(100 - intensity * 80);
+        slider.style.setProperty("color", `rgb(${red},${greenBlue},${greenBlue})`);
         slider.addEventListener("input", () => {
           cat.current = parseFloat(slider.value);
           render();
         });
         row.appendChild(slider);
 
-        const adjusted = document.createElement("span");
-        adjusted.textContent = `£${cat.current.toFixed(1)}`;
-        row.appendChild(adjusted);
+        const current = document.createElement("span");
+        current.textContent = `£${cat.current.toFixed(1)}`;
+        row.appendChild(current);
 
         const official = document.createElement("span");
         official.textContent = `£${cat.allocation.toFixed(1)}`;
@@ -203,7 +229,20 @@
         row.appendChild(variance);
 
         container.appendChild(row);
+
+        totals.current += cat.current;
+        totals.official += cat.allocation;
+        totals.variance += diff;
       });
+
+      const totalsRow = document.getElementById("totals-row");
+      totalsRow.innerHTML = `
+        <span>Total</span>
+        <span></span>
+        <span>£${totals.current.toFixed(1)}</span>
+        <span>£${totals.official.toFixed(1)}</span>
+        <span>${totals.variance >= 0 ? "+" : ""}${totals.variance.toFixed(1)}</span>
+      `;
 
       updateTotals();
       drawBarChart();
@@ -242,7 +281,7 @@
 
       const width = +svg.attr("width");
       const height = +svg.attr("height");
-      const margin = { top: 20, right: 30, bottom: 70, left: 80 };
+      const margin = { top: 30, right: 30, bottom: 70, left: 80 };
 
       const x = d3.scaleBand()
         .domain(categories.map(c => c.name))
@@ -274,6 +313,15 @@
         .attr("width", x.bandwidth() / 2)
         .attr("fill", "#d1d1d6");
 
+      svg.selectAll(".label-official")
+        .data(categories)
+        .enter()
+        .append("text")
+        .attr("x", d => x(d.name) + x.bandwidth() / 4)
+        .attr("y", d => y(d.allocation) - 5)
+        .attr("text-anchor", "middle")
+        .text(d => `£${d.allocation.toFixed(1)}`);
+
       svg.selectAll(".bar-current")
         .data(categories)
         .enter()
@@ -283,6 +331,16 @@
         .attr("height", d => y(0) - y(d.current))
         .attr("width", x.bandwidth() / 2)
         .attr("fill", "#007aff");
+
+      svg.selectAll(".label-current")
+        .data(categories)
+        .enter()
+        .append("text")
+        .attr("x", d => x(d.name) + 3 * x.bandwidth() / 4)
+        .attr("y", d => y(d.current) - 5)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#007aff")
+        .text(d => `£${d.current.toFixed(1)}`);
     }
 
     document.addEventListener("DOMContentLoaded", render);
