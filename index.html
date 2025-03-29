@@ -335,12 +335,14 @@
     }
 
     function downloadBudget() {
-      const header = "Category,Official,Adjusted,Variance\n";
+      const header = "Category,Official,Adjusted,Variance
+";
       const rows = categories.map(c => {
         const variance = (c.current - c.allocation).toFixed(1);
         return `${c.name},${c.allocation.toFixed(1)},${c.current.toFixed(1)},${variance}`;
       });
-      const blob = new Blob([header + rows.join("\n")], { type: "text/csv" });
+      const blob = new Blob([header + rows.join("
+")], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
