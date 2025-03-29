@@ -72,7 +72,7 @@
 
     .slider-container, .slider-header, .slider-total {
       display: grid;
-      grid-template-columns: 160px 40px auto 80px 100px 80px;
+      grid-template-columns: 160px 40px auto 100px 100px;
       align-items: center;
       gap: 12px;
       padding: 10px 0;
@@ -133,6 +133,13 @@
       height: 30px;
       font-size: 16px;
       padding: 0;
+    }
+
+    .slider-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
     }
 
     #chart {
@@ -234,6 +241,8 @@
         toggles.appendChild(minus);
         row.appendChild(toggles);
 
+        const wrapper = document.createElement("div");
+        wrapper.className = "slider-wrapper";
         const slider = document.createElement("input");
         slider.type = "range";
         slider.min = 0;
@@ -248,11 +257,11 @@
           cat.current = parseFloat(slider.value);
           render();
         });
-        row.appendChild(slider);
-
-        const current = document.createElement("span");
-        current.textContent = `£${cat.current.toLocaleString(undefined, { minimumFractionDigits: 1 })}`;
-        row.appendChild(current);
+        const currentVal = document.createElement("div");
+        currentVal.textContent = `£${cat.current.toLocaleString(undefined, { minimumFractionDigits: 1 })}`;
+        wrapper.appendChild(slider);
+        wrapper.appendChild(currentVal);
+        row.appendChild(wrapper);
 
         const official = document.createElement("span");
         official.textContent = `£${cat.allocation.toLocaleString(undefined, { minimumFractionDigits: 1 })}`;
@@ -272,10 +281,8 @@
         totals.variance += diff;
       });
 
-      const totalDisplay = document.getElementById("total");
-      const remainingDisplay = document.getElementById("remaining");
-      totalDisplay.textContent = totals.current.toLocaleString(undefined, { minimumFractionDigits: 1 });
-      remainingDisplay.textContent = (totalBudget - totals.current).toLocaleString(undefined, { minimumFractionDigits: 1 });
+      document.getElementById("total").textContent = totals.current.toLocaleString(undefined, { minimumFractionDigits: 1 });
+      document.getElementById("remaining").textContent = (totalBudget - totals.current).toLocaleString(undefined, { minimumFractionDigits: 1 });
 
       const totalsRow = document.getElementById("totals-row");
       const absVar = Math.abs(totals.variance).toLocaleString(undefined, { minimumFractionDigits: 1 });
@@ -297,14 +304,12 @@
     }
 
     function downloadBudget() {
-      const header = "Category,Official,Adjusted,Variance
-";
+      const header = "Category,Official,Adjusted,Variance\n";
       const rows = categories.map(c => {
         const variance = (c.current - c.allocation).toFixed(1);
         return `${c.name},${c.allocation.toFixed(1)},${c.current.toFixed(1)},${variance}`;
       });
-      const blob = new Blob([header + rows.join("
-")], { type: "text/csv" });
+      const blob = new Blob([header + rows.join("\n")], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
