@@ -164,7 +164,7 @@
   <h1>UK Budget Allocator 2025</h1>
 
   <div id="summary">
-    <p><strong>Official UK Budget for 2025:</strong> £1,080.0 billion <a href="https://www.gov.uk/government/statistics/public-spending-statistics-2023" target="_blank">(source)</a></p>
+    <p><strong>Official UK Budget for 2025:</strong> £1,080.0 billion <a href="https://www.gov.uk/government/statistics/public-spending-statistics-2023" target="_blank" rel="noopener noreferrer">(source)</a></p>
     <p><strong>Personal Forecast for 2025:</strong> £<span id="total">0</span> billion</p>
     <p><strong>Remaining Budget:</strong> £<span id="remaining">0</span> billion</p>
   </div>
@@ -179,7 +179,7 @@
   <div class="slider-header">
     <span>Category</span>
     <span></span>
-    <span>Forecast</span>
+    <span>Forecast (Slider + Value)</span>
     <span>Official</span>
     <span>Variance</span>
   </div>
@@ -297,12 +297,14 @@
     }
 
     function downloadBudget() {
-      const header = "Category,Official,Adjusted,Variance\n";
+      const header = "Category,Official,Adjusted,Variance
+";
       const rows = categories.map(c => {
         const variance = (c.current - c.allocation).toFixed(1);
         return `${c.name},${c.allocation.toFixed(1)},${c.current.toFixed(1)},${variance}`;
       });
-      const blob = new Blob([header + rows.join("\n")], { type: "text/csv" });
+      const blob = new Blob([header + rows.join("
+")], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
