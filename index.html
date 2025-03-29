@@ -18,14 +18,14 @@
     }
     #controls, .slider-header, .slider-total {
       display: grid;
-      grid-template-columns: 160px 40px 1fr 100px 100px;
+      grid-template-columns: 160px 40px 1fr repeat(3, 1fr);
       gap: 12px;
       align-items: center;
       margin-bottom: 10px;
     }
     .slider-container {
       display: grid;
-      grid-template-columns: 160px 40px 1fr 100px 100px;
+      grid-template-columns: 160px 40px 1fr repeat(3, 1fr);
       gap: 12px;
       align-items: center;
       padding: 6px 0;
@@ -62,8 +62,8 @@
   <h1>UK Budget Allocator 2025</h1>
   <p><strong>Official UK Budget for 2025:</strong> £1,080.0 billion <a href="https://www.gov.uk/government/statistics/public-spending-statistics-2023" target="_blank">(source)</a></p>
   <p><strong>Personal Forecast:</strong> £<span id="total">0</span> billion | <strong>Remaining:</strong> £<span id="remaining">0</span> billion</p>
-  <div id="controls">
-    <span>Category</span><span></span><span>Forecast</span><span>Official</span><span>Variance</span>
+  <div id="controls" class="slider-header">
+    <span>Category</span><span></span><span>Slider</span><span>Forecast</span><span>Official</span><span>Variance</span>
   </div>
   <div id="sliders"></div>
   <div class="slider-total" id="totals"></div>
@@ -151,6 +151,7 @@ function render() {
 
   document.getElementById("totals").innerHTML = `
     <span>Total</span><span></span>
+    <span></span>
     <span>£${formatNum(total)}</span>
     <span>£${formatNum(totalBudget)}</span>
     <span>${total - totalBudget < 0 ? `(${formatNum(Math.abs(total - totalBudget))})` : `+${formatNum(total - totalBudget)}`}</span>`;
@@ -161,9 +162,10 @@ function render() {
 function drawChart() {
   const svg = d3.select("#chart");
   svg.selectAll("*").remove();
-  const width = +svg.attr("width"), height = +svg.attr("height"), margin = {top: 30, right: 30, bottom: 70, left: 80};
+  const width = +svg.attr("width"), height = +svg.attr("height"), margin = {top: 30, right: 50, bottom: 70, left: 80};
   const x = d3.scaleBand().domain(forecast.map(d => d.name)).range([margin.left, width - margin.right]).padding(0.2);
-  const y = d3.scaleLinear().domain([0, d3.max(forecast, d => Math.max(d.current, d.value)) * 1.1]).range([height - margin.bottom, margin.top]);
+  const yMax = d3.max(forecast, d => Math.max(d.current, d.value)) * 1.1;
+  const y = d3.scaleLinear().domain([0, yMax]).range([height - margin.bottom, margin.top]);
 
   svg.append("g")
     .attr("transform", `translate(0,${height - margin.bottom})`)
@@ -175,6 +177,10 @@ function drawChart() {
   svg.append("g")
     .attr("transform", `translate(${margin.left},0)`)
     .call(d3.axisLeft(y));
+
+  svg.append("g")
+    .attr("transform", `translate(${width - margin.right},0)`)
+    .call(d3.axisRight(y));
 
   svg.selectAll(".bar-official")
     .data(forecast)
