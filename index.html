@@ -148,7 +148,31 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 20px;
+      position: relative;
     }
+
+    .legend {
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 20px;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      margin-right: 6px;
+      display: inline-block;
+    }
+
+    .official-color { background: #d1d1d6; }
+    .forecast-color { background: #007aff; }
+    .line-total { stroke: #28a745; stroke-width: 2; stroke-dasharray: 4; }
+    .line-forecast { stroke: #007aff; stroke-width: 2; stroke-dasharray: 4; }
 
     svg text {
       font-size: 12px;
@@ -197,6 +221,10 @@
   <h2>Official vs. Adjusted Budget</h2>
   <div id="chart">
     <svg width="900" height="420" id="barChart"></svg>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-color official-color"></span> Official Budget</span>
+      <span class="legend-item"><span class="legend-color forecast-color"></span> Personal Forecast</span>
+    </div>
   </div>
 
   <script>
@@ -241,8 +269,9 @@
         toggles.appendChild(minus);
         row.appendChild(toggles);
 
-        const wrapper = document.createElement("div");
-        wrapper.className = "slider-wrapper";
+        const sliderWrap = document.createElement("div");
+        sliderWrap.className = "slider-wrapper";
+
         const slider = document.createElement("input");
         slider.type = "range";
         slider.min = 0;
@@ -257,11 +286,13 @@
           cat.current = parseFloat(slider.value);
           render();
         });
-        const currentVal = document.createElement("div");
-        currentVal.textContent = `£${cat.current.toLocaleString(undefined, { minimumFractionDigits: 1 })}`;
-        wrapper.appendChild(slider);
-        wrapper.appendChild(currentVal);
-        row.appendChild(wrapper);
+        sliderWrap.appendChild(slider);
+
+        const current = document.createElement("div");
+        current.textContent = `£${cat.current.toLocaleString(undefined, { minimumFractionDigits: 1 })}`;
+        sliderWrap.appendChild(current);
+
+        row.appendChild(sliderWrap);
 
         const official = document.createElement("span");
         official.textContent = `£${cat.allocation.toLocaleString(undefined, { minimumFractionDigits: 1 })}`;
@@ -295,7 +326,7 @@
         <span>${varText}</span>
       `;
 
-      drawBarChart();
+      drawBarChart(totals);
     }
 
     function resetBudget() {
@@ -319,7 +350,7 @@
       document.body.removeChild(a);
     }
 
-    function drawBarChart() {
+    function drawBarChart(totals) {
       const svg = d3.select("#barChart");
       svg.selectAll("*").remove();
 
@@ -332,8 +363,10 @@
         .range([margin.left, width - margin.right])
         .padding(0.2);
 
+      const yMax = d3.max(categories, c => Math.max(c.allocation, c.current)) * 1.2;
+
       const y = d3.scaleLinear()
-        .domain([0, d3.max(categories, c => Math.max(c.allocation, c.current)) * 1.2])
+        .domain([0, yMax])
         .range([height - margin.bottom, margin.top]);
 
       svg.append("g")
@@ -357,15 +390,6 @@
         .attr("width", x.bandwidth() / 2)
         .attr("fill", "#d1d1d6");
 
-      svg.selectAll(".label-official")
-        .data(categories)
-        .enter()
-        .append("text")
-        .attr("x", d => x(d.name) + x.bandwidth() / 4)
-        .attr("y", d => y(d.allocation) - 5)
-        .attr("text-anchor", "middle")
-        .text(d => `£${d.allocation.toFixed(1)}`);
-
       svg.selectAll(".bar-current")
         .data(categories)
         .enter()
@@ -376,15 +400,21 @@
         .attr("width", x.bandwidth() / 2)
         .attr("fill", "#007aff");
 
-      svg.selectAll(".label-current")
-        .data(categories)
-        .enter()
-        .append("text")
-        .attr("x", d => x(d.name) + 3 * x.bandwidth() / 4)
-        .attr("y", d => y(d.current) - 5)
-        .attr("text-anchor", "middle")
-        .attr("fill", "#007aff")
-        .text(d => `£${d.current.toFixed(1)}`);
+      // Total budget line (static)
+      svg.append("line")
+        .attr("x1", margin.left)
+        .attr("x2", width - margin.right)
+        .attr("y1", y(totalBudget))
+        .attr("y2", y(totalBudget))
+        .attr("class", "line-total");
+
+      // Forecast budget line (dynamic)
+      svg.append("line")
+        .attr("x1", margin.left)
+        .attr("x2", width - margin.right)
+        .attr("y1", y(totals.current))
+        .attr("y2", y(totals.current))
+        .attr("class", "line-forecast");
     }
 
     document.addEventListener("DOMContentLoaded", render);
