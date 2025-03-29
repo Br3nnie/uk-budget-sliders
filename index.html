@@ -36,6 +36,15 @@
       padding-bottom: 5px;
     }
 
+    #summary {
+      margin-bottom: 20px;
+    }
+
+    #summary strong {
+      display: inline-block;
+      width: 240px;
+    }
+
     #controls {
       display: flex;
       justify-content: space-between;
@@ -63,7 +72,7 @@
 
     .slider-container, .slider-header, .slider-total {
       display: grid;
-      grid-template-columns: 160px auto 80px 100px 80px;
+      grid-template-columns: 160px 40px auto 80px 100px 80px;
       align-items: center;
       gap: 12px;
       padding: 10px 0;
@@ -115,6 +124,7 @@
 
     .toggle-buttons {
       display: flex;
+      flex-direction: column;
       gap: 4px;
     }
 
@@ -153,14 +163,16 @@
 <body>
   <h1>UK Budget Allocator 2025</h1>
 
+  <div id="summary">
+    <p><strong>Official UK Budget for 2025:</strong> £1,080.0 billion <a href="https://www.gov.uk/government/statistics/public-spending-statistics-2023" target="_blank">(source)</a></p>
+    <p><strong>Personal Forecast for 2025:</strong> £<span id="total">0</span> billion</p>
+    <p><strong>Remaining Budget:</strong> £<span id="remaining">0</span> billion</p>
+  </div>
+
   <div id="controls">
     <div>
       <button onclick="resetBudget()">Reset</button>
       <button onclick="downloadBudget()">Download CSV</button>
-    </div>
-    <div>
-      <strong>Total:</strong> £<span id="total">0</span> billion &nbsp; | &nbsp;
-      <strong>Remaining:</strong> £<span id="remaining">0</span> billion
     </div>
   </div>
 
@@ -210,7 +222,18 @@
         label.textContent = cat.name;
         row.appendChild(label);
 
-        const sliderWrap = document.createElement("div");
+        const toggles = document.createElement("div");
+        toggles.className = "toggle-buttons";
+        const plus = document.createElement("button");
+        plus.textContent = "+";
+        plus.onclick = () => { cat.current += 1; render(); };
+        const minus = document.createElement("button");
+        minus.textContent = "−";
+        minus.onclick = () => { cat.current = Math.max(0, cat.current - 1); render(); };
+        toggles.appendChild(plus);
+        toggles.appendChild(minus);
+        row.appendChild(toggles);
+
         const slider = document.createElement("input");
         slider.type = "range";
         slider.min = 0;
@@ -225,21 +248,7 @@
           cat.current = parseFloat(slider.value);
           render();
         });
-        sliderWrap.appendChild(slider);
-
-        const toggles = document.createElement("div");
-        toggles.className = "toggle-buttons";
-        const plus = document.createElement("button");
-        plus.textContent = "+";
-        plus.onclick = () => { cat.current += 1; render(); };
-        const minus = document.createElement("button");
-        minus.textContent = "−";
-        minus.onclick = () => { cat.current = Math.max(0, cat.current - 1); render(); };
-        toggles.appendChild(minus);
-        toggles.appendChild(plus);
-
-        sliderWrap.appendChild(toggles);
-        row.appendChild(sliderWrap);
+        row.appendChild(slider);
 
         const current = document.createElement("span");
         current.textContent = `£${cat.current.toLocaleString(undefined, { minimumFractionDigits: 1 })}`;
@@ -263,6 +272,11 @@
         totals.variance += diff;
       });
 
+      const totalDisplay = document.getElementById("total");
+      const remainingDisplay = document.getElementById("remaining");
+      totalDisplay.textContent = totals.current.toLocaleString(undefined, { minimumFractionDigits: 1 });
+      remainingDisplay.textContent = (totalBudget - totals.current).toLocaleString(undefined, { minimumFractionDigits: 1 });
+
       const totalsRow = document.getElementById("totals-row");
       const absVar = Math.abs(totals.variance).toLocaleString(undefined, { minimumFractionDigits: 1 });
       const varText = totals.variance < 0 ? `(${absVar})` : `+${absVar}`;
@@ -274,14 +288,7 @@
         <span>${varText}</span>
       `;
 
-      updateTotals();
       drawBarChart();
-    }
-
-    function updateTotals() {
-      const total = categories.reduce((sum, c) => sum + c.current, 0);
-      document.getElementById("total").textContent = total.toFixed(1);
-      document.getElementById("remaining").textContent = (totalBudget - total).toFixed(1);
     }
 
     function resetBudget() {
