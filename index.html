@@ -3,423 +3,216 @@
 <head>
   <meta charset="UTF-8" />
   <title>UK Budget Allocator 2025</title>
-  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
-    :root {
-      --bg: #f5f5f7;
-      --text: #1d1d1f;
-      --accent: #007aff;
-      --border: #d1d1d6;
-      --light: #e5e5ea;
-      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-
     body {
-      font-family: var(--font);
-      background: var(--bg);
-      color: var(--text);
-      padding: 40px 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f5f5f7;
+      color: #1d1d1f;
+      padding: 2rem;
       max-width: 1000px;
       margin: auto;
     }
-
-    h1 {
-      font-size: 28px;
+    h1, h2 {
       font-weight: 600;
+    }
+    #controls, .slider-header, .slider-total {
+      display: grid;
+      grid-template-columns: 160px 40px 1fr 100px 100px;
+      gap: 12px;
+      align-items: center;
       margin-bottom: 10px;
     }
-
-    h2 {
-      font-size: 20px;
-      margin-top: 40px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 5px;
-    }
-
-    #summary {
-      margin-bottom: 20px;
-    }
-
-    #summary strong {
-      display: inline-block;
-      width: 240px;
-    }
-
-    #controls {
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-bottom: 20px;
-      gap: 1rem;
-    }
-
-    button {
-      font-family: var(--font);
-      padding: 6px 14px;
-      font-size: 14px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: white;
-      color: var(--text);
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    button:hover {
-      background: var(--light);
-    }
-
-    .slider-container, .slider-header, .slider-total {
-      display: grid;
-      grid-template-columns: 160px 40px auto 100px 100px;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 0;
-    }
-
     .slider-container {
-      border-bottom: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 160px 40px 1fr 100px 100px;
+      gap: 12px;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid #d1d1d6;
     }
-
-    .slider-header {
-      font-weight: 600;
-      border-bottom: 2px solid var(--border);
-      margin-top: 10px;
-      margin-bottom: 5px;
-    }
-
-    .slider-total {
-      font-weight: 600;
-      border-top: 2px solid var(--border);
-    }
-
-    input[type="range"] {
-      -webkit-appearance: none;
-      width: 100%;
-      height: 6px;
-      border-radius: 5px;
-      background: var(--light);
-      outline: none;
-      transition: background 0.3s;
-    }
-
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: currentColor;
-      cursor: pointer;
-      box-shadow: 0 0 0 1px white;
-    }
-
-    input[type="range"]::-moz-range-thumb {
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: currentColor;
-      cursor: pointer;
-    }
-
-    .toggle-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
     .toggle-buttons button {
       width: 30px;
       height: 30px;
       font-size: 16px;
-      padding: 0;
     }
-
-    .slider-wrapper {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 4px;
+    input[type=range] {
+      width: 100%;
     }
-
-    #chart {
-      margin-top: 30px;
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      position: relative;
-    }
-
     .legend {
-      font-size: 14px;
       margin-top: 10px;
+      font-size: 14px;
     }
-
-    .legend-item {
-      display: inline-flex;
-      align-items: center;
+    .legend span {
       margin-right: 20px;
     }
-
-    .legend-color {
-      width: 16px;
-      height: 16px;
-      margin-right: 6px;
-      display: inline-block;
+    .official-line {
+      stroke: #28a745;
+      stroke-width: 2;
+      stroke-dasharray: 4;
     }
-
-    .official-color { background: #d1d1d6; }
-    .forecast-color { background: #007aff; }
-    .line-total { stroke: #28a745; stroke-width: 2; stroke-dasharray: 4; }
-    .line-forecast { stroke: #007aff; stroke-width: 2; stroke-dasharray: 4; }
-
-    svg text {
-      font-size: 12px;
-    }
-
-    @media (max-width: 700px) {
-      .slider-container, .slider-header, .slider-total {
-        grid-template-columns: 1fr;
-        gap: 4px;
-      }
-
-      #controls {
-        flex-direction: column;
-        align-items: flex-start;
-      }
+    .forecast-line {
+      stroke: #007aff;
+      stroke-width: 2;
+      stroke-dasharray: 4;
     }
   </style>
 </head>
 <body>
   <h1>UK Budget Allocator 2025</h1>
-
-  <div id="summary">
-    <p><strong>Official UK Budget for 2025:</strong> £1,080.0 billion <a href="https://www.gov.uk/government/statistics/public-spending-statistics-2023" target="_blank" rel="noopener noreferrer">(source)</a></p>
-    <p><strong>Personal Forecast for 2025:</strong> £<span id="total">0</span> billion</p>
-    <p><strong>Remaining Budget:</strong> £<span id="remaining">0</span> billion</p>
-  </div>
-
+  <p><strong>Official UK Budget for 2025:</strong> £1,080.0 billion <a href="https://www.gov.uk/government/statistics/public-spending-statistics-2023" target="_blank">(source)</a></p>
+  <p><strong>Personal Forecast:</strong> £<span id="total">0</span> billion | <strong>Remaining:</strong> £<span id="remaining">0</span> billion</p>
   <div id="controls">
-    <div>
-      <button onclick="resetBudget()">Reset</button>
-      <button onclick="downloadBudget()">Download CSV</button>
-    </div>
+    <span>Category</span><span></span><span>Forecast</span><span>Official</span><span>Variance</span>
   </div>
-
-  <div class="slider-header">
-    <span>Category</span>
-    <span></span>
-    <span>Forecast (Slider + Value)</span>
-    <span>Official</span>
-    <span>Variance</span>
-  </div>
-
   <div id="sliders"></div>
-  <div class="slider-total" id="totals-row"></div>
-
-  <h2>Official vs. Adjusted Budget</h2>
-  <div id="chart">
-    <svg width="900" height="420" id="barChart"></svg>
-    <div class="legend">
-      <span class="legend-item"><span class="legend-color official-color"></span> Official Budget</span>
-      <span class="legend-item"><span class="legend-color forecast-color"></span> Personal Forecast</span>
-    </div>
+  <div class="slider-total" id="totals"></div>
+  <h2>Budget Chart</h2>
+  <svg id="chart" width="900" height="420"></svg>
+  <div class="legend">
+    <span style="color:#d1d1d6;">⬛ Official</span>
+    <span style="color:#007aff;">⬛ Forecast</span>
   </div>
+<script>
+const totalBudget = 1080.0;
+const data = [
+  { name: "Health", value: 190.1 },
+  { name: "Education", value: 88.8 },
+  { name: "Defence", value: 37.5 },
+  { name: "Welfare", value: 251.0 },
+  { name: "Public Order", value: 39.0 },
+  { name: "Transport", value: 45.0 },
+  { name: "Housing/Environment", value: 30.0 },
+  { name: "Debt Interest", value: 83.0 },
+  { name: "Other", value: 215.6 }
+];
 
-  <script>
-    const totalBudget = 1080.0;
-    const defaultCategories = [
-      { name: "Health", allocation: 190.1 },
-      { name: "Education", allocation: 88.8 },
-      { name: "Defence", allocation: 37.5 },
-      { name: "Welfare", allocation: 251.0 },
-      { name: "Public Order", allocation: 39.0 },
-      { name: "Transport", allocation: 45.0 },
-      { name: "Housing/Environment", allocation: 30.0 },
-      { name: "Debt Interest", allocation: 83.0 },
-      { name: "Other", allocation: 215.6 }
-    ];
+let forecast = data.map(d => ({ ...d, current: d.value }));
 
-    let categories = defaultCategories.map(c => ({ ...c, current: c.allocation }));
+function formatNum(n) {
+  return n.toLocaleString(undefined, { minimumFractionDigits: 1 });
+}
 
-    function render() {
-      const container = document.getElementById("sliders");
-      container.innerHTML = "";
+function render() {
+  const container = document.getElementById("sliders");
+  container.innerHTML = "";
+  let total = 0;
 
-      let totals = { current: 0, official: 0, variance: 0 };
+  forecast.forEach((item, i) => {
+    const row = document.createElement("div");
+    row.className = "slider-container";
 
-      categories.forEach((cat, index) => {
-        const row = document.createElement("div");
-        row.className = "slider-container";
+    const label = document.createElement("span");
+    label.textContent = item.name;
 
-        const label = document.createElement("span");
-        label.textContent = cat.name;
-        row.appendChild(label);
+    const buttons = document.createElement("div");
+    buttons.className = "toggle-buttons";
+    const plus = document.createElement("button"); plus.textContent = "+";
+    const minus = document.createElement("button"); minus.textContent = "−";
+    plus.onclick = () => { item.current += 1; render(); };
+    minus.onclick = () => { item.current = Math.max(0, item.current - 1); render(); };
+    buttons.appendChild(plus);
+    buttons.appendChild(minus);
 
-        const toggles = document.createElement("div");
-        toggles.className = "toggle-buttons";
-        const plus = document.createElement("button");
-        plus.textContent = "+";
-        plus.onclick = () => { cat.current += 1; render(); };
-        const minus = document.createElement("button");
-        minus.textContent = "−";
-        minus.onclick = () => { cat.current = Math.max(0, cat.current - 1); render(); };
-        toggles.appendChild(plus);
-        toggles.appendChild(minus);
-        row.appendChild(toggles);
-
-        const sliderWrap = document.createElement("div");
-        sliderWrap.className = "slider-wrapper";
-
-        const slider = document.createElement("input");
-        slider.type = "range";
-        slider.min = 0;
-        slider.max = totalBudget;
-        slider.step = 1;
-        slider.value = cat.current;
-        const intensity = Math.min(1, cat.current / (totalBudget * 0.5));
-        const red = 255;
-        const greenBlue = Math.floor(100 - intensity * 80);
-        slider.style.setProperty("color", `rgb(${red},${greenBlue},${greenBlue})`);
-        slider.addEventListener("input", () => {
-          cat.current = parseFloat(slider.value);
-          render();
-        });
-        sliderWrap.appendChild(slider);
-
-        const current = document.createElement("div");
-        current.textContent = `£${cat.current.toLocaleString(undefined, { minimumFractionDigits: 1 })}`;
-        sliderWrap.appendChild(current);
-
-        row.appendChild(sliderWrap);
-
-        const official = document.createElement("span");
-        official.textContent = `£${cat.allocation.toLocaleString(undefined, { minimumFractionDigits: 1 })}`;
-        row.appendChild(official);
-
-        const variance = document.createElement("span");
-        const diff = cat.current - cat.allocation;
-        const absDiff = Math.abs(diff).toLocaleString(undefined, { minimumFractionDigits: 1 });
-        variance.textContent = diff < 0 ? `(${absDiff})` : `+${absDiff}`;
-        variance.style.color = diff === 0 ? "#555" : diff < 0 ? "red" : "green";
-        row.appendChild(variance);
-
-        container.appendChild(row);
-
-        totals.current += cat.current;
-        totals.official += cat.allocation;
-        totals.variance += diff;
-      });
-
-      document.getElementById("total").textContent = totals.current.toLocaleString(undefined, { minimumFractionDigits: 1 });
-      document.getElementById("remaining").textContent = (totalBudget - totals.current).toLocaleString(undefined, { minimumFractionDigits: 1 });
-
-      const totalsRow = document.getElementById("totals-row");
-      const absVar = Math.abs(totals.variance).toLocaleString(undefined, { minimumFractionDigits: 1 });
-      const varText = totals.variance < 0 ? `(${absVar})` : `+${absVar}`;
-      totalsRow.innerHTML = `
-        <span>Total</span>
-        <span></span>
-        <span>£${totals.current.toLocaleString(undefined, { minimumFractionDigits: 1 })}</span>
-        <span>£${totals.official.toLocaleString(undefined, { minimumFractionDigits: 1 })}</span>
-        <span>${varText}</span>
-      `;
-
-      drawBarChart(totals);
-    }
-
-    function resetBudget() {
-      categories = defaultCategories.map(c => ({ ...c, current: c.allocation }));
+    const slider = document.createElement("input");
+    slider.type = "range";
+    slider.min = 0;
+    slider.max = totalBudget;
+    slider.value = item.current;
+    slider.oninput = () => {
+      item.current = +slider.value;
       render();
-    }
+    };
 
-    function downloadBudget() {
-      const header = "Category,Official,Adjusted,Variance
-";
-      const rows = categories.map(c => {
-        const variance = (c.current - c.allocation).toFixed(1);
-        return `${c.name},${c.allocation.toFixed(1)},${c.current.toFixed(1)},${variance}`;
-      });
-      const blob = new Blob([header + rows.join("
-")], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "uk_budget.csv";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
+    const forecastVal = document.createElement("span");
+    forecastVal.textContent = `£${formatNum(item.current)}`;
 
-    function drawBarChart(totals) {
-      const svg = d3.select("#barChart");
-      svg.selectAll("*").remove();
+    const officialVal = document.createElement("span");
+    officialVal.textContent = `£${formatNum(item.value)}`;
 
-      const width = +svg.attr("width");
-      const height = +svg.attr("height");
-      const margin = { top: 30, right: 30, bottom: 70, left: 80 };
+    const diff = item.current - item.value;
+    const variance = document.createElement("span");
+    variance.textContent = diff < 0 ? `(${formatNum(Math.abs(diff))})` : `+${formatNum(diff)}`;
+    variance.style.color = diff === 0 ? "#333" : diff < 0 ? "red" : "green";
 
-      const x = d3.scaleBand()
-        .domain(categories.map(c => c.name))
-        .range([margin.left, width - margin.right])
-        .padding(0.2);
+    row.appendChild(label);
+    row.appendChild(buttons);
+    row.appendChild(slider);
+    row.appendChild(forecastVal);
+    row.appendChild(officialVal);
+    row.appendChild(variance);
+    container.appendChild(row);
 
-      const yMax = d3.max(categories, c => Math.max(c.allocation, c.current)) * 1.2;
+    total += item.current;
+  });
 
-      const y = d3.scaleLinear()
-        .domain([0, yMax])
-        .range([height - margin.bottom, margin.top]);
+  document.getElementById("total").textContent = formatNum(total);
+  document.getElementById("remaining").textContent = formatNum(totalBudget - total);
 
-      svg.append("g")
-        .attr("transform", `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x))
-        .selectAll("text")
-        .attr("transform", "rotate(-40)")
-        .style("text-anchor", "end");
+  document.getElementById("totals").innerHTML = `
+    <span>Total</span><span></span>
+    <span>£${formatNum(total)}</span>
+    <span>£${formatNum(totalBudget)}</span>
+    <span>${total - totalBudget < 0 ? `(${formatNum(Math.abs(total - totalBudget))})` : `+${formatNum(total - totalBudget)}`}</span>`;
 
-      svg.append("g")
-        .attr("transform", `translate(${margin.left},0)`)
-        .call(d3.axisLeft(y));
+  drawChart();
+}
 
-      svg.selectAll(".bar-official")
-        .data(categories)
-        .enter()
-        .append("rect")
-        .attr("x", d => x(d.name))
-        .attr("y", d => y(d.allocation))
-        .attr("height", d => y(0) - y(d.allocation))
-        .attr("width", x.bandwidth() / 2)
-        .attr("fill", "#d1d1d6");
+function drawChart() {
+  const svg = d3.select("#chart");
+  svg.selectAll("*").remove();
+  const width = +svg.attr("width"), height = +svg.attr("height"), margin = {top: 30, right: 30, bottom: 70, left: 80};
+  const x = d3.scaleBand().domain(forecast.map(d => d.name)).range([margin.left, width - margin.right]).padding(0.2);
+  const y = d3.scaleLinear().domain([0, d3.max(forecast, d => Math.max(d.current, d.value)) * 1.1]).range([height - margin.bottom, margin.top]);
 
-      svg.selectAll(".bar-current")
-        .data(categories)
-        .enter()
-        .append("rect")
-        .attr("x", d => x(d.name) + x.bandwidth() / 2)
-        .attr("y", d => y(d.current))
-        .attr("height", d => y(0) - y(d.current))
-        .attr("width", x.bandwidth() / 2)
-        .attr("fill", "#007aff");
+  svg.append("g")
+    .attr("transform", `translate(0,${height - margin.bottom})`)
+    .call(d3.axisBottom(x))
+    .selectAll("text")
+    .attr("transform", "rotate(-40)")
+    .style("text-anchor", "end");
 
-      // Total budget line (static)
-      svg.append("line")
-        .attr("x1", margin.left)
-        .attr("x2", width - margin.right)
-        .attr("y1", y(totalBudget))
-        .attr("y2", y(totalBudget))
-        .attr("class", "line-total");
+  svg.append("g")
+    .attr("transform", `translate(${margin.left},0)`)
+    .call(d3.axisLeft(y));
 
-      // Forecast budget line (dynamic)
-      svg.append("line")
-        .attr("x1", margin.left)
-        .attr("x2", width - margin.right)
-        .attr("y1", y(totals.current))
-        .attr("y2", y(totals.current))
-        .attr("class", "line-forecast");
-    }
+  svg.selectAll(".bar-official")
+    .data(forecast)
+    .enter()
+    .append("rect")
+    .attr("x", d => x(d.name))
+    .attr("y", d => y(d.value))
+    .attr("width", x.bandwidth()/2)
+    .attr("height", d => y(0) - y(d.value))
+    .attr("fill", "#d1d1d6");
 
-    document.addEventListener("DOMContentLoaded", render);
-  </script>
+  svg.selectAll(".bar-forecast")
+    .data(forecast)
+    .enter()
+    .append("rect")
+    .attr("x", d => x(d.name) + x.bandwidth()/2)
+    .attr("y", d => y(d.current))
+    .attr("width", x.bandwidth()/2)
+    .attr("height", d => y(0) - y(d.current))
+    .attr("fill", "#007aff");
+
+  svg.append("line")
+    .attr("x1", margin.left)
+    .attr("x2", width - margin.right)
+    .attr("y1", y(totalBudget))
+    .attr("y2", y(totalBudget))
+    .attr("class", "official-line");
+
+  const total = forecast.reduce((sum, d) => sum + d.current, 0);
+  svg.append("line")
+    .attr("x1", margin.left)
+    .attr("x2", width - margin.right)
+    .attr("y1", y(total))
+    .attr("y2", y(total))
+    .attr("class", "forecast-line");
+}
+
+render();
+</script>
 </body>
 </html>
