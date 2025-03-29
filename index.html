@@ -18,15 +18,15 @@
     }
     #controls, .slider-header, .slider-total {
       display: grid;
-      grid-template-columns: 160px 40px 1fr repeat(3, 1fr);
-      gap: 12px;
+      grid-template-columns: 160px 40px 1fr 90px 90px 90px;
+      gap: 8px;
       align-items: center;
       margin-bottom: 10px;
     }
     .slider-container {
       display: grid;
-      grid-template-columns: 160px 40px 1fr repeat(3, 1fr);
-      gap: 12px;
+      grid-template-columns: 160px 40px 1fr 90px 90px 90px;
+      gap: 8px;
       align-items: center;
       padding: 6px 0;
       border-bottom: 1px solid #d1d1d6;
@@ -56,12 +56,25 @@
       stroke-width: 2;
       stroke-dasharray: 4;
     }
+    #buttons {
+      margin-bottom: 20px;
+    }
+    #buttons button {
+      margin-right: 10px;
+    }
   </style>
 </head>
 <body>
   <h1>UK Budget Allocator 2025</h1>
   <p><strong>Official UK Budget for 2025:</strong> £1,080.0 billion <a href="https://www.gov.uk/government/statistics/public-spending-statistics-2023" target="_blank">(source)</a></p>
   <p><strong>Personal Forecast:</strong> £<span id="total">0</span> billion | <strong>Remaining:</strong> £<span id="remaining">0</span> billion</p>
+
+  <div id="buttons">
+    <button onclick="resetBudget()">🔄 Reset</button>
+    <button onclick="window.print()">🖨 Print</button>
+    <button onclick="downloadPNG()">📥 Download Chart</button>
+  </div>
+
   <div id="controls" class="slider-header">
     <span>Category</span><span></span><span>Slider</span><span>Forecast</span><span>Official</span><span>Variance</span>
   </div>
@@ -93,12 +106,17 @@ function formatNum(n) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 1 });
 }
 
+function resetBudget() {
+  forecast = data.map(d => ({ ...d, current: d.value }));
+  render();
+}
+
 function render() {
   const container = document.getElementById("sliders");
   container.innerHTML = "";
   let total = 0;
 
-  forecast.forEach((item, i) => {
+  forecast.forEach((item) => {
     const row = document.createElement("div");
     row.className = "slider-container";
 
@@ -162,7 +180,7 @@ function render() {
 function drawChart() {
   const svg = d3.select("#chart");
   svg.selectAll("*").remove();
-  const width = +svg.attr("width"), height = +svg.attr("height"), margin = {top: 30, right: 50, bottom: 70, left: 80};
+  const width = +svg.attr("width"), height = +svg.attr("height"), margin = {top: 30, right: 60, bottom: 70, left: 80};
   const x = d3.scaleBand().domain(forecast.map(d => d.name)).range([margin.left, width - margin.right]).padding(0.2);
   const yMax = d3.max(forecast, d => Math.max(d.current, d.value)) * 1.1;
   const y = d3.scaleLinear().domain([0, yMax]).range([height - margin.bottom, margin.top]);
@@ -176,11 +194,11 @@ function drawChart() {
 
   svg.append("g")
     .attr("transform", `translate(${margin.left},0)`)
-    .call(d3.axisLeft(y));
+    .call(d3.axisLeft(y).tickFormat(d => `£${formatNum(d)}`));
 
   svg.append("g")
     .attr("transform", `translate(${width - margin.right},0)`)
-    .call(d3.axisRight(y));
+    .call(d3.axisRight(y).tickFormat(d => `£${formatNum(d)}`));
 
   svg.selectAll(".bar-official")
     .data(forecast)
@@ -216,6 +234,20 @@ function drawChart() {
     .attr("y1", y(total))
     .attr("y2", y(total))
     .attr("class", "forecast-line");
+}
+
+function downloadPNG() {
+  const svg = document.getElementById("chart");
+  const serializer = new XMLSerializer();
+  const source = serializer.serializeToString(svg);
+  const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "budget-chart.svg";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 render();
